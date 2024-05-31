@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.css'%}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap-theme.css'%}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css'%}">
+    <link href="//fonts.googleapis.com/css?family=PT+Sans" rel="stylesheet" type="text/css">
+
+</head>
+<body>
+<div class="search-block">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-6 col-lg-offset-3 col-md-6 col-md-offset-3  col-sm-6 col-sm-offset-3">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="question-field"
+                           placeholder="Введите ваш вопрос...">
+                      <span class="input-group-btn">
+                        <button class="btn btn-success" id="question-btn" type="button">Поиск</button>
+                      </span>
+                    <div class="gn" id="question-microphone">
+                        <div class="mc"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-6 col-lg-offset-3 col-md-6 col-md-offset-3  col-sm-6 col-sm-offset-3">
+                <div id="question-hint" role="alert">
+                    Например:
+                    <i id="question-hint-text1"> Какая столица Украины? </i>
+                    или
+                    <i id="question-hint-text2"> Джордж Вашингтон? </i>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-6 col-lg-offset-3 col-md-6 col-md-offset-3  col-sm-6 col-sm-offset-3">
+                <div id="feedback-stats" role="alert">
+                    Точность системы:&nbsp;
+                    <i id="feedback-stats-accuracy"></i>% &nbsp;
+                    (на основании <i id="feedback-stats-count"></i> уникальных вопросов)
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6 col-lg-offset-3 col-md-6 col-md-offset-3  col-sm-6 col-sm-offset-3">
+                <div class="alert alert-warning hidden text-center" id="feedback-frame" role="alert">
+                    <div class="text-center"> Это правильный ответ? </div>
+                    <div class="btn-group" id="feedback-btn-group" role="group" aria-label="...">
+                        <button type="button" class="btn btn-success" id="btn-yes">&nbsp;Да&nbsp;</button>
+                        <button type="button" class="btn btn-warning" id="btn-no">Нет</button>
+                    </div>
+                </div>
+                <div class="alert alert-info hidden" id="answer" role="alert">
+                    <div id="answer-text"></div>
+                    <img id="answer-img" src="" alt="Image">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--<div class="navbar-fixed-top text-center col-lg-6 col-lg-offset-3 col-md-6 col-md-offset-3  col-sm-6 col-sm-offset-3">-->
+    <!--<div id="feedback-stats" role="alert">-->
+        <!--Точность системы:&nbsp;-->
+        <!--<i id="feedback-stats-accuracy"></i>% &nbsp;-->
+        <!--(на основании <i id="feedback-stats-count"></i> оценок)-->
+    <!--</div>-->
+<!--</div>-->
+
+<div class="modal"><!-- Place at bottom of page --></div>
+<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="{% static 'js/jquery.min.js' %}"></script> 
+<!-- <script src="{% static 'js/jquery-3.3.1.js' %}"></script>  -->
+<!-- <script src="{% static 'js/ajax.js' %}"></script> -->
+<script src="{% static 'js/events.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+<script src="{% static 'js/speech_synthesis.js' %}"></script>
+
+
+<script type="text/javascript">
+    function get_answer() {
+    var data = {};
+    data['question'] = $('#question-field').val().trim();
+    // Кто был научным руководителем Тьюринга?
+    data['language'] = 'ru';
+    console.log(data);
+    $.ajax({
+        method: 'GET',
+        url: 'get_answer',
+        data: data,
+        success: function (answer_json) {
+            var answer_object = JSON.parse(answer_json);
+            console.log(answer_json);
+            if (typeof(answer_object) != "undefined") {
+                var answer = answer_object['answer'];
+                var image = answer_object['image'] || '';
+                var error = answer_object['error'] || '';
+                $('#answer-text').text(answer);
+                if (image == '') {
+                    $('#answer-img').addClass('hidden');
+                }
+                else {
+                    $('#answer-img').attr("src", image);
+                    $('#answer-img').removeClass('hidden');
+                }
+                $('#answer').removeClass('hidden');
+                console.log(error);
+                if (!error) {
+                    console.log(error);
+                    $('#feedback-frame').removeClass('hidden');
+                }
+                else {
+                    $('#feedback-frame').addClass('hidden');
+                }
+
+                var utterance = new SpeechSynthesisUtterance(answer);
+                utterance.lang = 'ru-RU';
+                // speechUtteranceChunker(utterance, {
+                //     chunkLength: 200
+                // }, function () {
+                //     //some code to execute when done
+                //     console.log('done');
+                // });
+            } else {
+                $('#answer-text').html("Ошибка соединения с сервером!");
+            }
+            $('#answer-text').removeClass('hidden');
+
+        }
+    });
+}
+
+function get_feedback_stats() {
+    $.ajax({
+        method: 'GET',
+        url: 'get_feedback_stats',
+        success: function (answer_json) {
+            var answer_object = JSON.parse(JSON.stringify(answer_json));
+            console.log(answer_object);
+            var avg = answer_object['avg_score'];
+            var cnt = answer_object['count_answers'];
+            $('#feedback-stats-accuracy').text((avg*100).toFixed(2));
+            $('#feedback-stats-count').text(cnt);
+        }
+    });
+}
+
+function set_feedback(isCorrect) {
+    var data = {};
+    data['question'] = $('#question-field').val().trim();
+    data['language'] = 'ru';
+    data['isCorrect'] = isCorrect;
+    console.log(data);
+    $.ajax({
+        method: 'POST',
+        url: 'set_feedback',
+        data: data,
+        success: function () {
+            get_feedback_stats();
+        }
+    });
+}
+
+</script>
+
+</body>
+</html>
